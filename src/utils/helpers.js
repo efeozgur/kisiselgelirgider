@@ -2,12 +2,11 @@ import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isW
 import { tr } from 'date-fns/locale';
 
 export const formatCurrency = (amount, currency = 'TRY') => {
-  return new Intl.NumberFormat('tr-TR', {
-    style: 'currency',
-    currency: currency,
+  const formatted = new Intl.NumberFormat('tr-TR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
+  return currency === 'TRY' ? `${formatted} TL` : `${formatted} ${currency}`;
 };
 
 export const formatNumber = (value, decimals = 2) => {

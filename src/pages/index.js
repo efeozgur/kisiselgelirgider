@@ -7,3 +7,7 @@ export { Installments } from './Installments';
 export { Debts } from './Debts';
 export { Reports } from './Reports';
 export { Settings } from './Settings';
+export { Savings } from './Savings';
+export { Subscriptions } from './Subscriptions';
+export { Notifications } from './Notifications';
+export { Analytics } from './Analytics';

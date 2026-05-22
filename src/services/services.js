@@ -831,3 +831,516 @@ export const settingsService = {
     runDelete('DELETE FROM app_settings WHERE key = ?', [key]);
   }
 };
+
+export const savingsGoalService = {
+  getAll() {
+    return runQuery('SELECT * FROM savings_goals ORDER BY created_at DESC');
+  },
+
+  getById(id) {
+    const results = runQuery('SELECT * FROM savings_goals WHERE id = ?', [id]);
+    return results[0];
+  },
+
+  create(data) {
+    const id = generateId();
+    const now = new Date().toISOString();
+
+    runInsert(`
+      INSERT INTO savings_goals (id, name, target_amount, current_amount, target_date, icon, color, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      id,
+      data.name,
+      data.target_amount,
+      data.current_amount || 0,
+      data.target_date || null,
+      data.icon || 'target',
+      data.color || '#10b981',
+      'active',
+      now,
+      now
+    ]);
+
+    return id;
+  },
+
+  update(id, data) {
+    const now = new Date().toISOString();
+    return runUpdate(`
+      UPDATE savings_goals SET
+        name = COALESCE(?, name),
+        target_amount = COALESCE(?, target_amount),
+        current_amount = COALESCE(?, current_amount),
+        target_date = ?,
+        icon = COALESCE(?, icon),
+        color = COALESCE(?, color),
+        status = COALESCE(?, status),
+        updated_at = ?
+      WHERE id = ?
+    `, [
+      data.name,
+      data.target_amount,
+      data.current_amount,
+      data.target_date || null,
+      data.icon,
+      data.color,
+      data.status,
+      now,
+      id
+    ]);
+  },
+
+  delete(id) {
+    return runDelete('DELETE FROM savings_goals WHERE id = ?', [id]);
+  },
+
+  addContribution(id, amount) {
+    const goal = this.getById(id);
+    if (!goal) return null;
+
+    const now = new Date().toISOString();
+    runUpdate(`
+      UPDATE savings_goals SET
+        current_amount = current_amount + ?,
+        updated_at = ?
+      WHERE id = ?
+    `, [amount, now, id]);
+
+    const updated = this.getById(id);
+    if (updated.current_amount >= updated.target_amount) {
+      runUpdate('UPDATE savings_goals SET status = ? WHERE id = ?', ['completed', id]);
+    }
+
+    return updated;
+  }
+};
+
+export const subscriptionService = {
+  getAll() {
+    return runQuery(`
+      SELECT s.*, c.name as category_name, a.name as account_name
+      FROM subscriptions s
+      LEFT JOIN categories c ON s.category_id = c.id
+      LEFT JOIN accounts a ON s.account_id = a.id
+      ORDER BY s.next_date
+    `);
+  },
+
+  getActive() {
+    return runQuery(`
+      SELECT s.*, c.name as category_name, a.name as account_name
+      FROM subscriptions s
+      LEFT JOIN categories c ON s.category_id = c.id
+      LEFT JOIN accounts a ON s.account_id = a.id
+      WHERE s.is_active = 1
+      ORDER BY s.next_date
+    `);
+  },
+
+  getUpcoming(days = 7) {
+    const today = new Date().toISOString().split('T')[0];
+    const future = new Date();
+    future.setDate(future.getDate() + days);
+    const futureStr = future.toISOString().split('T')[0];
+
+    return runQuery(`
+      SELECT s.*, c.name as category_name, a.name as account_name
+      FROM subscriptions s
+      LEFT JOIN categories c ON s.category_id = c.id
+      LEFT JOIN accounts a ON s.account_id = a.id
+      WHERE s.is_active = 1 AND s.next_date >= ? AND s.next_date <= ?
+      ORDER BY s.next_date
+    `, [today, futureStr]);
+  },
+
+  getById(id) {
+    const results = runQuery(`
+      SELECT s.*, c.name as category_name, a.name as account_name
+      FROM subscriptions s
+      LEFT JOIN categories c ON s.category_id = c.id
+      LEFT JOIN accounts a ON s.account_id = a.id
+      WHERE s.id = ?
+    `, [id]);
+    return results[0];
+  },
+
+  create(data) {
+    const id = generateId();
+    const now = new Date().toISOString();
+
+    runInsert(`
+      INSERT INTO subscriptions (id, name, amount, frequency, next_date, category_id, account_id, description, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      id,
+      data.name,
+      data.amount,
+      data.frequency,
+      data.next_date,
+      data.category_id || null,
+      data.account_id || null,
+      data.description || '',
+      1,
+      now,
+      now
+    ]);
+
+    return id;
+  },
+
+  update(id, data) {
+    const now = new Date().toISOString();
+    return runUpdate(`
+      UPDATE subscriptions SET
+        name = COALESCE(?, name),
+        amount = COALESCE(?, amount),
+        frequency = COALESCE(?, frequency),
+        next_date = ?,
+        category_id = ?,
+        account_id = ?,
+        description = COALESCE(?, description),
+        is_active = COALESCE(?, is_active),
+        updated_at = ?
+      WHERE id = ?
+    `, [
+      data.name,
+      data.amount,
+      data.frequency,
+      data.next_date,
+      data.category_id || null,
+      data.account_id || null,
+      data.description,
+      data.is_active,
+      now,
+      id
+    ]);
+  },
+
+  delete(id) {
+    return runDelete('DELETE FROM subscriptions WHERE id = ?', [id]);
+  },
+
+  markAsPaid(id) {
+    const subscription = this.getById(id);
+    if (!subscription) return null;
+
+    const now = new Date();
+    const nextDate = new Date(subscription.next_date);
+
+    switch (subscription.frequency) {
+      case 'daily':
+        nextDate.setDate(nextDate.getDate() + 1);
+        break;
+      case 'weekly':
+        nextDate.setDate(nextDate.getDate() + 7);
+        break;
+      case 'monthly':
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        break;
+      case 'yearly':
+        nextDate.setFullYear(nextDate.getFullYear() + 1);
+        break;
+    }
+
+    return runUpdate(`
+      UPDATE subscriptions SET next_date = ?, updated_at = ? WHERE id = ?
+    `, [nextDate.toISOString().split('T')[0], now.toISOString(), id]);
+  },
+
+  getTotalMonthlyAmount() {
+    const subscriptions = this.getActive();
+    return subscriptions.reduce((sum, s) => {
+      switch (s.frequency) {
+        case 'daily': return sum + (s.amount * 30);
+        case 'weekly': return sum + (s.amount * 4);
+        case 'monthly': return sum + s.amount;
+        case 'yearly': return sum + (s.amount / 12);
+        default: return sum;
+      }
+    }, 0);
+  }
+};
+
+export const notificationService = {
+  getAll() {
+    return runQuery('SELECT * FROM notifications ORDER BY created_at DESC');
+  },
+
+  getUnread() {
+    return runQuery('SELECT * FROM notifications WHERE is_read = 0 ORDER BY created_at DESC');
+  },
+
+  getUnreadCount() {
+    const result = runQuery('SELECT COUNT(*) as count FROM notifications WHERE is_read = 0');
+    return result[0]?.count || 0;
+  },
+
+  getByType(type) {
+    return runQuery('SELECT * FROM notifications WHERE type = ? ORDER BY created_at DESC', [type]);
+  },
+
+  create(data) {
+    const id = generateId();
+    const now = new Date().toISOString();
+
+    runInsert(`
+      INSERT INTO notifications (id, type, title, message, is_read, data, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      id,
+      data.type,
+      data.title,
+      data.message || '',
+      0,
+      data.data ? JSON.stringify(data.data) : null,
+      now
+    ]);
+
+    return id;
+  },
+
+  markAsRead(id) {
+    return runUpdate('UPDATE notifications SET is_read = 1 WHERE id = ?', [id]);
+  },
+
+  markAllAsRead() {
+    return runUpdate('UPDATE notifications SET is_read = 1 WHERE is_read = 0');
+  },
+
+  delete(id) {
+    return runDelete('DELETE FROM notifications WHERE id = ?', [id]);
+  },
+
+  deleteOld(daysOld = 30) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - daysOld);
+    return runDelete('DELETE FROM notifications WHERE is_read = 1 AND created_at < ?', [cutoff.toISOString()]);
+  },
+
+  clearAll() {
+    return runDelete('DELETE FROM notifications');
+  }
+};
+
+export const anomalyService = {
+  getAll() {
+    return runQuery(`
+      SELECT a.*, c.name as category_name, t.description as transaction_desc, t.amount as transaction_amount
+      FROM anomalies a
+      LEFT JOIN categories c ON a.category_id = c.id
+      LEFT JOIN transactions t ON a.transaction_id = t.id
+      ORDER BY a.created_at DESC
+    `);
+  },
+
+  getUnresolved() {
+    return runQuery(`
+      SELECT a.*, c.name as category_name, t.description as transaction_desc, t.amount as transaction_amount
+      FROM anomalies a
+      LEFT JOIN categories c ON a.category_id = c.id
+      LEFT JOIN transactions t ON a.transaction_id = t.id
+      WHERE a.is_resolved = 0
+      ORDER BY a.created_at DESC
+    `);
+  },
+
+  create(data) {
+    const id = generateId();
+    const now = new Date().toISOString();
+
+    runInsert(`
+      INSERT INTO anomalies (id, transaction_id, category_id, expected_amount, actual_amount, deviation_percent, is_resolved, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      id,
+      data.transaction_id || null,
+      data.category_id,
+      data.expected_amount,
+      data.actual_amount,
+      data.deviation_percent,
+      0,
+      now
+    ]);
+
+    return id;
+  },
+
+  resolve(id) {
+    return runUpdate('UPDATE anomalies SET is_resolved = 1 WHERE id = ?', [id]);
+  },
+
+  delete(id) {
+    return runDelete('DELETE FROM anomalies WHERE id = ?', [id]);
+  },
+
+  detectAnomalies() {
+    const categories = runQuery(`
+      SELECT c.id, c.name, c.type,
+             AVG(t.amount) as avg_amount,
+             STDDEV(t.amount) as stddev_amount,
+             COUNT(t.id) as transaction_count
+      FROM categories c
+      LEFT JOIN transactions t ON c.id = t.category_id AND t.status = 'paid'
+      WHERE c.type = 'expense'
+      GROUP BY c.id
+      HAVING transaction_count >= 3 AND stddev_amount IS NOT NULL
+    `);
+
+    const anomalies = [];
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    const startOfMonth = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+    const endOfMonth = `${currentYear}-${String(currentMonth).padStart(2, '0')}-31`;
+
+    categories.forEach(cat => {
+      if (cat.stddev_amount && cat.avg_amount) {
+        const threshold = cat.avg_amount + (cat.stddev_amount * 2);
+        const recentTransactions = runQuery(`
+          SELECT SUM(amount) as total, COUNT(*) as count
+          FROM transactions
+          WHERE category_id = ? AND type = 'expense' AND status = 'paid'
+            AND date >= ? AND date <= ?
+        `, [cat.id, startOfMonth, endOfMonth]);
+
+        if (recentTransactions[0]?.total > threshold) {
+          const deviation = ((recentTransactions[0].total - cat.avg_amount) / cat.avg_amount) * 100;
+          if (deviation > 50) {
+            anomalies.push({
+              category_id: cat.id,
+              expected_amount: cat.avg_amount,
+              actual_amount: recentTransactions[0].total,
+              deviation_percent: deviation
+            });
+          }
+        }
+      }
+    });
+
+    return anomalies;
+  }
+};
+
+export const analyticsService = {
+  getMonthlyComparison(months = 6) {
+    const now = new Date();
+    const results = [];
+
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const m = d.getMonth() + 1;
+      const y = d.getFullYear();
+      const stats = transactionService.getMonthlyStats(m, y);
+      const monthName = d.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+
+      results.push({
+        month: monthName,
+        monthNum: m,
+        year: y,
+        income: stats.income,
+        expense: stats.expense,
+        net: stats.net,
+        transactionCount: runQuery(`
+          SELECT COUNT(*) as count FROM transactions
+          WHERE strftime('%m', date) = ? AND strftime('%Y', date) = ?
+        `, [String(m).padStart(2, '0'), String(y)])[0]?.count || 0
+      });
+    }
+
+    return results;
+  },
+
+  getTrendAnalysis() {
+    const monthlyData = this.getMonthlyComparison(6);
+
+    const incomes = monthlyData.map(m => m.income);
+    const expenses = monthlyData.map(m => m.expense);
+
+    const avgIncome = incomes.reduce((a, b) => a + b, 0) / incomes.length;
+    const avgExpense = expenses.reduce((a, b) => a + b, 0) / expenses.length;
+
+    const incomeTrend = this.calculateTrend(incomes);
+    const expenseTrend = this.calculateTrend(expenses);
+
+    return {
+      averageIncome: avgIncome,
+      averageExpense: avgExpense,
+      incomeTrend: incomeTrend,
+      expenseTrend: expenseTrend,
+      monthlyData: monthlyData
+    };
+  },
+
+  calculateTrend(values) {
+    if (values.length < 2) return 0;
+
+    const n = values.length;
+    const sumX = (n * (n - 1)) / 2;
+    const sumY = values.reduce((a, b) => a + b, 0);
+    const sumXY = values.reduce((sum, y, x) => sum + (x * y), 0);
+    const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6;
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+
+    const avg = sumY / n;
+    return avg > 0 ? (slope / avg) * 100 : 0;
+  },
+
+  getForecast() {
+    const trend = this.getTrendAnalysis();
+
+    const lastMonth = trend.monthlyData[trend.monthlyData.length - 1];
+    const incomeGrowth = trend.incomeTrend / 100;
+    const expenseGrowth = trend.expenseTrend / 100;
+
+    const forecastIncome = lastMonth.income * (1 + incomeGrowth);
+    const forecastExpense = lastMonth.expense * (1 + expenseGrowth);
+
+    return {
+      predictedIncome: forecastIncome,
+      predictedExpense: forecastExpense,
+      predictedNet: forecastIncome - forecastExpense,
+      confidence: Math.abs(trend.incomeTrend) + Math.abs(trend.expenseTrend) > 20 ? 'low' : 'medium'
+    };
+  },
+
+  getSavingsPotential() {
+    const trend = this.getTrendAnalysis();
+    const potentialSavings = trend.averageExpense * 0.15;
+
+    const topExpenseCategories = transactionService.getCategoryStats('expense', '2000-01-01', '2099-12-31')
+      .slice(0, 3)
+      .map(c => ({
+        name: c.name,
+        amount: c.total,
+        potentialReduction: c.total * 0.1
+      }));
+
+    return {
+      monthlyPotential: potentialSavings,
+      yearlyPotential: potentialSavings * 12,
+      topCategories: topExpenseCategories,
+      suggestion: `Eğer en yüksek 3 gider kategorisinde %10 tasarruf yaparsanız, ayda ${(potentialSavings * 0.6).toFixed(2)} TL biriktirebilirsiniz.`
+    };
+  },
+
+  getYearOverYearComparison() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    const thisYearStats = [];
+    const lastYearStats = [];
+
+    for (let m = 1; m <= currentMonth; m++) {
+      const thisYear = transactionService.getMonthlyStats(m, currentYear);
+      thisYearStats.push({ month: m, ...thisYear });
+
+      const lastYear = transactionService.getMonthlyStats(m, currentYear - 1);
+      lastYearStats.push({ month: m, ...lastYear });
+    }
+
+    return { thisYear: thisYearStats, lastYear: lastYearStats };
+  }
+};

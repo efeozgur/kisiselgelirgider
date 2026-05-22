@@ -11,6 +11,10 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Target,
+  RefreshCw,
+  Bell,
+  TrendingUp,
 } from 'lucide-react';
 
 const navItems = [
@@ -21,6 +25,10 @@ const navItems = [
   { path: '/budgets', icon: PiggyBank, label: 'Bütçe' },
   { path: '/installments', icon: CreditCard, label: 'Taksitler' },
   { path: '/debts', icon: Scale, label: 'Borç/Alacak' },
+  { path: '/subscriptions', icon: RefreshCw, label: 'Abonelikler' },
+  { path: '/savings', icon: Target, label: 'Hedefler' },
+  { path: '/analytics', icon: TrendingUp, label: 'Analiz' },
+  { path: '/notifications', icon: Bell, label: 'Bildirimler' },
   { path: '/reports', icon: BarChart3, label: 'Raporlar' },
   { path: '/settings', icon: Settings, label: 'Ayarlar' },
 ];

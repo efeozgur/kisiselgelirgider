@@ -1,0 +1,62 @@
+# Kişisel Gelir Gider Takip Uygulaması
+
+Finansal geleceğinizi kontrol altına alın!
+
+## Uygulama Hakkında
+
+Kişisel Gelir Gider Takip, gelir ve giderlerinizi kolayca takip etmenizi, bütçenizi yönetmenizi ve finansal hedeflerinize ulaşmanızı sağlayan modern bir kişisel finans yönetim aracıdır.
+
+## Temel Özellikler
+
+### 📊 Gelir ve Gider Takibi
+- Tüm gelir ve giderlerinizi kategorilere göre düzenleyin
+- Nakit, banka hesabı, kredi kartı ve kripto cüzdanı gibi farklı hesap türlerini yönetin
+- Aylık ve yıllık özet raporları görüntüleyin
+
+### 🎯 Bütçe Yönetimi
+- Her kategori için aylık bütçe limiti belirleyin
+- Bütçe aşımı ve uyarı sistemi ile harcamalarınızı kontrol altında tutun
+- Görsel grafikler ile bütçe durumunuzu takip edin
+
+### 💰 Tasarruf Hedefleri
+- Belirlediğiniz tasarruf hedeflerini takip edin
+- Hedeflerinize yönelik ilerlemenizi görün
+- Tasarruf motivasyonunuzu yüksek tutun
+
+### 📅 Abonelik Takibi
+- Düzenli aboneliklerinizi (Netflix, Spotify, internet vb.) kaydedin
+- Yaklaşan ödemeler hakkında bildirim alın
+- Abonelik giderlerinizi tek bakışta görün
+
+### 💳 Kredi Kartı Takibi
+- Kredi kartı harcamalarınızı takip edin
+- Borç durumunuzu ve ödeme planlarınızı yönetin
+
+### 📈 Analitik ve Raporlama
+- Gelir-gider trendlerini analiz edin
+- Harcamalarınızda normal dışı sapmaları tespit edin (Anomali Tespiti)
+- Aylık karşılaştırmalar yapın
+- Excel formatında detaylı raporlar oluşturun ve indirin
+
+### 🔔 Bildirim Sistemi
+- Bütçe aşımlarında anlık uyarılar
+- Yaklaşan ödemeler için hatırlatmalar
+- Tüm önemli finansal gelişmelerden haberdar olun
+
+## Kullanım Kolaylığı
+
+- **Kolay Kurulum**: Tarayıcıda çalışır, indirme gerektirmez
+- **Güvenli**: Tüm veriler yalnızca cihazınızda saklanır
+- **Mobil Uyumlu**: Her cihazdan erişin
+- **Türkçe Arayüz**: Tam Türkçe dil desteği
+
+## Teknoloji
+
+- Modern React arayüzü
+- Hızlı ve güvenilir SQL.js veritabanı
+- Görsel grafikler için Recharts
+- Profesyonel Excel raporları için XLSX
+
+---
+
+Finansal özgürlüğe giden yolda ilk adımı atın. Hemen kullanmaya başlayın!

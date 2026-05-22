@@ -159,6 +159,58 @@ const schema = `
     key TEXT PRIMARY KEY,
     value TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS savings_goals (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    target_amount REAL NOT NULL,
+    current_amount REAL DEFAULT 0,
+    target_date TEXT,
+    icon TEXT DEFAULT 'target',
+    color TEXT DEFAULT '#10b981',
+    status TEXT DEFAULT 'active' CHECK(status IN ('active', 'completed', 'paused')),
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS subscriptions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    amount REAL NOT NULL,
+    frequency TEXT NOT NULL CHECK(frequency IN ('daily', 'weekly', 'monthly', 'yearly')),
+    next_date TEXT NOT NULL,
+    category_id TEXT,
+    account_id TEXT,
+    description TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL CHECK(type IN ('budget_warning', 'budget_overflow', 'upcoming_payment', 'debt_due', 'anomaly', 'subscription_due', 'general')),
+    title TEXT NOT NULL,
+    message TEXT,
+    is_read INTEGER DEFAULT 0,
+    data TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS anomalies (
+    id TEXT PRIMARY KEY,
+    transaction_id TEXT,
+    category_id TEXT,
+    expected_amount REAL,
+    actual_amount REAL,
+    deviation_percent REAL,
+    is_resolved INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+  );
 `;
 
 const defaultCategories = [
@@ -202,6 +254,7 @@ export async function initDatabase() {
   if (savedDb && isFirstLaunch === 'false') {
     const data = Uint8Array.from(atob(savedDb), c => c.charCodeAt(0));
     db = new SQL.Database(data);
+    migrateDatabase();
   } else {
     db = new SQL.Database();
     db.run(schema);
@@ -212,6 +265,65 @@ export async function initDatabase() {
   }
 
   return db;
+}
+
+function migrateDatabase() {
+  const tableChecks = {
+    savings_goals: `CREATE TABLE IF NOT EXISTS savings_goals (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      target_amount REAL NOT NULL,
+      current_amount REAL DEFAULT 0,
+      target_date TEXT,
+      icon TEXT DEFAULT 'target',
+      color TEXT DEFAULT '#10b981',
+      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'completed', 'paused')),
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
+    subscriptions: `CREATE TABLE IF NOT EXISTS subscriptions (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      amount REAL NOT NULL,
+      frequency TEXT NOT NULL CHECK(frequency IN ('daily', 'weekly', 'monthly', 'yearly')),
+      next_date TEXT NOT NULL,
+      category_id TEXT,
+      account_id TEXT,
+      description TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+      FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL
+    )`,
+    notifications: `CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL CHECK(type IN ('budget_warning', 'budget_overflow', 'upcoming_payment', 'debt_due', 'anomaly', 'subscription_due', 'general')),
+      title TEXT NOT NULL,
+      message TEXT,
+      is_read INTEGER DEFAULT 0,
+      data TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
+    anomalies: `CREATE TABLE IF NOT EXISTS anomalies (
+      id TEXT PRIMARY KEY,
+      transaction_id TEXT,
+      category_id TEXT,
+      expected_amount REAL,
+      actual_amount REAL,
+      deviation_percent REAL,
+      is_resolved INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+    )`
+  };
+
+  Object.values(tableChecks).forEach(sql => {
+    db.run(sql);
+  });
+
+  saveDatabase();
 }
 
 async function seedDefaultData() {
@@ -235,7 +347,10 @@ async function seedDefaultData() {
 export function saveDatabase() {
   if (!db) return;
   const data = db.export();
-  const binary = String.fromCharCode.apply(null, [...data]);
+  let binary = '';
+  for (let i = 0; i < data.length; i++) {
+    binary += String.fromCharCode(data[i]);
+  }
   localStorage.setItem(DB_NAME, btoa(binary));
 }
 

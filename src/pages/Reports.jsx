@@ -88,33 +88,147 @@ export function Reports() {
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
 
-    const summaryData = [
-      ['Rapor Özeti', ''],
-      ['Tarih Aralığı', `${formatDate(startDate)} - ${formatDate(endDate)}`],
-      ['', ''],
-      ['Toplam Gelir', stats.income],
-      ['Toplam Gider', stats.expense],
-      ['Net Durum', stats.net],
-      ['İşlem Sayısı', stats.transactionCount],
-    ];
+    const transactions = transactionService.getAll({ start_date: startDate, end_date: endDate });
+    const accounts = transactionService.getAllBalances ? transactionService.getAllBalances() : [];
+    const budgets = budgetService.getAllBudgetStatus();
+    const installments = installmentService.getAll();
+    const debts = debtService.getAll();
+    const incomeCategories = transactionService.getCategoryStats('income', startDate, endDate);
+    const expenseCategories = transactionService.getCategoryStats('expense', startDate, endDate);
 
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    const wsSummary = XLSX.utils.aoa_to_sheet([
+      ['FİNANSAL RAPOR', ''],
+      ['Tarih Aralığı', `${formatDate(startDate)} - ${formatDate(endDate)}`],
+      ['Rapor Tarihi', formatDate(new Date().toISOString().split('T')[0])],
+      ['', ''],
+      ['ÖZET BİLGİLER', ''],
+      ['Toplam Gelir', stats.income, '₺'],
+      ['Toplam Gider', stats.expense, '₺'],
+      ['Net Durum', stats.net, '₺'],
+      ['Toplam İşlem', stats.transactionCount, 'adet'],
+      ['', ''],
+      ['GELİR-GİDER ÖZETİ', ''],
+      ['Toplam Gelir', stats.income, '₺'],
+      ['Toplam Gider', stats.expense, '₺'],
+      ['Net Durum', stats.net, '₺'],
+      ['İşlem Sayısı', stats.transactionCount, 'adet'],
+    ]);
     XLSX.utils.book_append_sheet(wb, wsSummary, 'Özet');
 
-    const categoryRows = [['Kategori', 'Tutar', 'Adet']];
-    categoryData.forEach(c => {
-      categoryRows.push([c.name, c.total, c.count]);
-    });
-    const wsCategory = XLSX.utils.aoa_to_sheet(categoryRows);
-    XLSX.utils.book_append_sheet(wb, wsCategory, 'Kategoriler');
+    const wsIncome = XLSX.utils.aoa_to_sheet([
+      ['GELİR KATEGORİLERİ', '', ''],
+      ['Kategori', 'Toplam Tutar', 'İşlem Sayısı'],
+      ...incomeCategories.map(c => [c.name, c.total, c.count]),
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsIncome, 'Gelir Kategorileri');
 
-    const txRows = [['Tarih', 'Tür', 'Kategori', 'Tutar', 'Hesap', 'Durum']];
-    const transactions = transactionService.getAll({ start_date: startDate, end_date: endDate });
-    transactions.forEach(t => {
-      txRows.push([t.date, t.type, t.category_name || '-', t.amount, t.account_name || '-', t.status]);
-    });
-    const wsTx = XLSX.utils.aoa_to_sheet(txRows);
-    XLSX.utils.book_append_sheet(wb, wsTx, 'İşlemler');
+    const wsExpense = XLSX.utils.aoa_to_sheet([
+      ['GİDER KATEGORİLERİ', '', ''],
+      ['Kategori', 'Toplam Tutar', 'İşlem Sayısı'],
+      ...expenseCategories.map(c => [c.name, c.total, c.count]),
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsExpense, 'Gider Kategorileri');
+
+    const wsTransactions = XLSX.utils.aoa_to_sheet([
+      ['İŞLEM DETAYLARI', '', '', '', '', '', '', '', '', ''],
+      ['Tarih', 'Saat', 'Tür', 'Kategori', 'Tutar', 'Hesap', 'Ödeme Yöntemi', 'Açıklama', 'Durum', 'Kalan Tutar'],
+      ...transactions.map(t => [
+        t.date,
+        t.time || '',
+        t.type === 'income' ? 'Gelir' : t.type === 'expense' ? 'Gider' : 'Transfer',
+        t.category_name || '-',
+        t.amount,
+        t.account_name || '-',
+        t.payment_method || '-',
+        t.description || '-',
+        t.status === 'paid' ? 'Ödendi' : t.status === 'pending' ? 'Bekliyor' : 'Planlandı',
+        t.type === 'expense' && t.status === 'paid' ? (t.amount * 0.15).toFixed(2) : '-',
+      ]),
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsTransactions, 'İşlemler');
+
+    const accountStats = transactionService.getAccountStats(startDate, endDate);
+    const wsAccounts = XLSX.utils.aoa_to_sheet([
+      ['HESAP BAZLI ÖZET', '', '', '', ''],
+      ['Hesap', 'Gelen', 'Giden', 'Net', 'Bakiye'],
+      ...accountStats.map(a => [
+        a.name,
+        a.income || 0,
+        a.expense || 0,
+        (a.income || 0) - (a.expense || 0),
+        a.name ? (accounts.find(acc => acc.name === a.name)?.current_balance || 0) : 0,
+      ]),
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsAccounts, 'Hesaplar');
+
+    const wsBudgets = XLSX.utils.aoa_to_sheet([
+      ['BÜTÇE DURUMU', '', '', '', '', ''],
+      ['Kategori', 'Limit', 'Harcama', 'Kalan', '%',
+        'Durum'],
+      ...budgets.map(b => [
+        b.category_name,
+        b.amount,
+        b.spent,
+        b.remaining,
+        b.percentage.toFixed(1),
+        b.isOverBudget ? 'Aşıldı' : b.isWarning ? 'Uyarı' : 'Normal',
+      ]),
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsBudgets, 'Bütçeler');
+
+    const wsInstallments = XLSX.utils.aoa_to_sheet([
+      ['TAKSİT ÖZETİ', '', '', '', '', ''],
+      ['Alışveriş', 'Toplam', 'Ödenen', 'Kalan', 'Aylık Ödeme', 'Durum'],
+      ...installments.map(i => [
+        i.name,
+        i.total_amount,
+        i.total_amount - i.remaining_amount,
+        i.remaining_amount,
+        i.monthly_payment,
+        i.status === 'active' ? 'Aktif' : i.status === 'completed' ? 'Tamamlandı' : 'Gecikti',
+      ]),
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsInstallments, 'Taksitler');
+
+    const wsDebts = XLSX.utils.aoa_to_sheet([
+      ['BORÇ/ALACAK DURUMU', '', '', '', '', ''],
+      ['Kişi/Kurum', 'Tür', 'Toplam', 'Kalan', 'Son Tarih', 'Durum'],
+      ...debts.map(d => [
+        d.person_name,
+        d.type === 'debt' ? 'Borç' : 'Alacak',
+        d.amount,
+        d.remaining_amount,
+        d.due_date || '-',
+        d.status === 'pending' ? 'Bekliyor' : d.status === 'paid' ? 'Ödendi' : 'Gecikti',
+      ]),
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsDebts, 'Borç-Alacak');
+
+    const monthHeaders = [];
+    const monthData = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    let current = new Date(start.getFullYear(), start.getMonth(), 1);
+
+    while (current <= end) {
+      const m = current.getMonth() + 1;
+      const y = current.getFullYear();
+      monthHeaders.push(`${y}-${String(m).padStart(2, '0')}`);
+      monthData.push(transactionService.getMonthlyStats(m, y));
+      current.setMonth(current.getMonth() + 1);
+    }
+
+    const wsMonthly = XLSX.utils.aoa_to_sheet([
+      ['AYLIK GELİR-GİDER', '', ''],
+      ['Ay', 'Gelir', 'Gider', 'Net'],
+      ...monthHeaders.map((h, i) => [
+        h,
+        monthData[i].income,
+        monthData[i].expense,
+        monthData[i].net,
+      ]),
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsMonthly, 'Aylık Özet');
 
     XLSX.writeFile(wb, `finans_raporu_${startDate}_${endDate}.xlsx`);
   };

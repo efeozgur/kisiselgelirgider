@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { Layout } from './components/layout';
 import {
   Dashboard,
@@ -10,7 +11,11 @@ import {
   Installments,
   Debts,
   Reports,
-  Settings
+  Settings,
+  Savings,
+  Subscriptions,
+  Notifications,
+  Analytics
 } from './pages';
 import { initDatabase } from './database/db';
 import { useEffect, useState } from 'react';
@@ -48,20 +53,26 @@ function AppContent() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/transactions" element={<Transactions />} />
-        <Route path="/accounts" element={<Accounts />} />
-        <Route path="/categories" element={<Categories />} />
-        <Route path="/budgets" element={<Budgets />} />
-        <Route path="/installments" element={<Installments />} />
-        <Route path="/debts" element={<Debts />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
-    </Layout>
+    <NotificationProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/accounts" element={<Accounts />} />
+          <Route path="/categories" element={<Categories />} />
+          <Route path="/budgets" element={<Budgets />} />
+          <Route path="/installments" element={<Installments />} />
+          <Route path="/debts" element={<Debts />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/savings" element={<Savings />} />
+          <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/analytics" element={<Analytics />} />
+        </Routes>
+      </Layout>
+    </NotificationProvider>
   );
 }
 
