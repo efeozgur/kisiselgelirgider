@@ -1,6 +1,12 @@
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { formatNumber } from '../../utils/helpers';
 
-const formatCurrency = (value) => `₺${value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}`;
+const formatCurrency = (value) => {
+  if (value >= 1000) {
+    return `₺${formatNumber(value / 1000, 0)}k`;
+  }
+  return `₺${formatNumber(value, 2)}`;
+};
 
 export function MonthlyLineChart({ data, title }) {
   return (
@@ -28,10 +34,10 @@ export function MonthlyLineChart({ data, title }) {
               borderRadius: '12px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
             }}
-            formatter={(value) => `₺${value.toFixed(2)}`}
+            formatter={(value, name) => [`₺${formatNumber(value, 2)}`, name === 'income' ? 'Gelir' : 'Gider']}
           />
-          <Area type="monotone" dataKey="income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={2} />
-          <Area type="monotone" dataKey="expense" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={2} />
+          <Area type="monotone" dataKey="income" name="Gelir" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={2} />
+          <Area type="monotone" dataKey="expense" name="Gider" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={2} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -59,9 +65,9 @@ export function BalanceTrendChart({ data, title }) {
               border: 'none',
               borderRadius: '12px',
             }}
-            formatter={(value) => `₺${value.toFixed(2)}`}
+            formatter={(value) => `₺${formatNumber(value, 2)}`}
           />
-          <Area type="monotone" dataKey="balance" stroke="#0ea5e9" fill="url(#colorBalance)" strokeWidth={2} />
+          <Area type="monotone" dataKey="balance" name="Bakiye" stroke="#0ea5e9" fill="url(#colorBalance)" strokeWidth={2} />
         </AreaChart>
       </ResponsiveContainer>
     </div>

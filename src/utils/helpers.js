@@ -10,6 +10,13 @@ export const formatCurrency = (amount, currency = 'TRY') => {
   }).format(amount);
 };
 
+export const formatNumber = (value, decimals = 2) => {
+  return new Intl.NumberFormat('tr-TR', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
+};
+
 export const formatDate = (date, formatStr = 'dd MMM yyyy') => {
   if (!date) return '';
   const d = typeof date === 'string' ? parseISO(date) : date;

@@ -73,7 +73,7 @@ export function Categories() {
     const data = {
       ...formData,
       type: formData.type,
-      monthly_limit: formData.monthly_limit ? parseFloat(formData.monthly_limit) : null,
+      monthly_limit: formData.monthly_limit !== '' ? parseFloat(formData.monthly_limit) || null : null,
     };
 
     if (editingCategory) {
@@ -108,7 +108,9 @@ export function Categories() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Kategoriler</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">{categories.length} kategori</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
+            {filterType ? (filterType === 'expense' ? expenseCategories.length : incomeCategories.length) : categories.length} kategori
+          </p>
         </div>
         <Button icon={Plus} onClick={() => openModal()}>Yeni Kategori</Button>
       </div>

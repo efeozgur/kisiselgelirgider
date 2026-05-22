@@ -71,7 +71,7 @@ export function Dashboard() {
       color: acc.color,
     }));
 
-    const budgets = budgetService.getAllBudgetStatus().filter(b => b.category_id.includes('expense')).slice(0, 6);
+    const budgets = budgetService.getAllBudgetStatus().filter(b => b.category_type === 'expense').slice(0, 6);
 
     const installments = installmentService.getThisMonthPayments();
     const upcomingDebts = debtService.getUpcoming(7);

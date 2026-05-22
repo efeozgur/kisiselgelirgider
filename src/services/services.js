@@ -101,23 +101,23 @@ export const transactionService = {
     const now = new Date().toISOString();
     return runUpdate(`
       UPDATE transactions SET
-        type = COALESCE(?, type),
-        amount = COALESCE(?, amount),
+        type = ?,
+        amount = ?,
         currency = COALESCE(?, currency),
-        date = COALESCE(?, date),
-        time = COALESCE(?, time),
+        date = ?,
+        time = ?,
         category_id = ?,
         subcategory_id = ?,
-        description = COALESCE(?, description),
-        payment_method = COALESCE(?, payment_method),
+        description = ?,
+        payment_method = ?,
         account_id = ?,
         to_account_id = ?,
-        status = COALESCE(?, status),
+        status = ?,
         updated_at = ?
       WHERE id = ?
     `, [
       data.type,
-      data.amount,
+      data.amount != null ? data.amount : null,
       data.currency,
       data.date,
       data.time,
@@ -363,7 +363,7 @@ export const categoryService = {
       data.type,
       data.icon,
       data.color,
-      data.monthly_limit || null,
+      data.monthly_limit != null ? data.monthly_limit : null,
       id
     ]);
   },
@@ -396,7 +396,7 @@ export const categoryService = {
 export const budgetService = {
   getAll() {
     return runQuery(`
-      SELECT b.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+      SELECT b.*, c.name as category_name, c.color as category_color, c.icon as category_icon, c.type as category_type
       FROM budgets b
       JOIN categories c ON b.category_id = c.id
       ORDER BY c.name
@@ -405,7 +405,7 @@ export const budgetService = {
 
   getById(id) {
     const results = runQuery(`
-      SELECT b.*, c.name as category_name, c.color as category_color
+      SELECT b.*, c.name as category_name, c.color as category_color, c.type as category_type
       FROM budgets b
       JOIN categories c ON b.category_id = c.id
       WHERE b.id = ?

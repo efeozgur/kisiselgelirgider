@@ -197,13 +197,18 @@ export async function initDatabase() {
   });
 
   const savedDb = localStorage.getItem(DB_NAME);
-  if (savedDb) {
+  const isFirstLaunch = localStorage.getItem('finansapp_first_launch');
+
+  if (savedDb && isFirstLaunch === 'false') {
     const data = Uint8Array.from(atob(savedDb), c => c.charCodeAt(0));
     db = new SQL.Database(data);
   } else {
     db = new SQL.Database();
     db.run(schema);
-    seedDefaultData();
+    if (isFirstLaunch !== 'false') {
+      seedDefaultData();
+      localStorage.setItem('finansapp_first_launch', 'true');
+    }
   }
 
   return db;
@@ -240,7 +245,8 @@ export function getDatabase() {
 
 export function runQuery(sql, params = []) {
   const stmt = db.prepare(sql);
-  stmt.bind(params);
+  const cleanParams = params.map(p => p === undefined ? null : p);
+  stmt.bind(cleanParams);
   const results = [];
   while (stmt.step()) {
     results.push(stmt.getAsObject());
@@ -250,19 +256,22 @@ export function runQuery(sql, params = []) {
 }
 
 export function runInsert(sql, params = []) {
-  db.run(sql, params);
+  const cleanParams = params.map(p => p === undefined ? null : p);
+  db.run(sql, cleanParams);
   saveDatabase();
   return db.getRowsModified() > 0;
 }
 
 export function runUpdate(sql, params = []) {
-  db.run(sql, params);
+  const cleanParams = params.map(p => p === undefined ? null : p);
+  db.run(sql, cleanParams);
   saveDatabase();
   return db.getRowsModified() > 0;
 }
 
 export function runDelete(sql, params = []) {
-  db.run(sql, params);
+  const cleanParams = params.map(p => p === undefined ? null : p);
+  db.run(sql, cleanParams);
   saveDatabase();
   return db.getRowsModified() > 0;
 }
@@ -274,7 +283,7 @@ export function getLastInsertId() {
 
 export function clearAllData() {
   if (!db) return;
-  
+
   try {
     db.run('DELETE FROM transaction_tags');
     db.run('DELETE FROM transactions');
@@ -290,6 +299,7 @@ export function clearAllData() {
     db.run('DELETE FROM recurring_transactions');
     saveDatabase();
     localStorage.removeItem(DB_NAME);
+    localStorage.setItem('finansapp_first_launch', 'false');
   } catch (e) {
     console.error('Error clearing data:', e);
   }

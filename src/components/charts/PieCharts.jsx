@@ -1,4 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { formatNumber } from '../../utils/helpers';
 
 const COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
@@ -37,7 +38,7 @@ export function CategoryPieChart({ data, title }) {
               borderRadius: '12px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
             }}
-            formatter={(value) => `₺${value.toFixed(2)}`}
+            formatter={(value, name) => [`₺${formatNumber(value, 2)}`, name]}
           />
           <Legend
             iconType="circle"
@@ -49,6 +50,13 @@ export function CategoryPieChart({ data, title }) {
     </div>
   );
 }
+
+const paymentMethodLabels = {
+  cash: 'Nakit',
+  card: 'Kart',
+  bank_transfer: 'Havale/EFT',
+  other: 'Diğer',
+};
 
 export function PaymentMethodDonut({ data }) {
   if (!data || data.length === 0) {
@@ -85,7 +93,7 @@ export function PaymentMethodDonut({ data }) {
               border: 'none',
               borderRadius: '12px',
             }}
-            formatter={(value) => `₺${value.toFixed(2)}`}
+            formatter={(value, name) => [`₺${value.toFixed(2)}`, paymentMethodLabels[name] || name]}
           />
         </PieChart>
       </ResponsiveContainer>
@@ -93,7 +101,7 @@ export function PaymentMethodDonut({ data }) {
         {data.map((item, index) => (
           <div key={item.payment_method} className="flex items-center gap-1 text-xs">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
-            <span className="text-slate-600 dark:text-slate-400">{item.payment_method}</span>
+            <span className="text-slate-600 dark:text-slate-400">{paymentMethodLabels[item.payment_method] || item.payment_method}</span>
           </div>
         ))}
       </div>

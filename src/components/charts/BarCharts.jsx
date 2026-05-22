@@ -1,4 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { formatNumber } from '../../utils/helpers';
 
 export function MonthlyBarChart({ data, title }) {
   return (
@@ -16,7 +17,7 @@ export function MonthlyBarChart({ data, title }) {
               borderRadius: '12px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
             }}
-            formatter={(value) => `₺${value.toFixed(2)}`}
+            formatter={(value, name) => [`₺${formatNumber(value, 2)}`, name === 'income' ? 'Gelir' : 'Gider']}
           />
           <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Gelir" />
           <Bar dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} name="Gider" />
@@ -41,9 +42,9 @@ export function AccountBarChart({ data, title }) {
               border: 'none',
               borderRadius: '12px',
             }}
-            formatter={(value) => `₺${value.toFixed(2)}`}
+            formatter={(value) => `₺${formatNumber(value, 2)}`}
           />
-          <Bar dataKey="balance" fill="#0ea5e9" radius={[0, 4, 4, 0]} />
+          <Bar dataKey="balance" fill="#0ea5e9" radius={[0, 4, 4, 0]} name="Bakiye" />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -64,10 +65,12 @@ export function BudgetProgressChart({ data, title }) {
               backgroundColor: 'rgba(255,255,255,0.95)',
               border: 'none',
               borderRadius: '12px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
             }}
-            formatter={(value) => `%${value.toFixed(1)}`}
+            formatter={(value) => [`%${formatNumber(value, 1)}`, 'Harcama']}
+            labelFormatter={(name) => name}
           />
-          <Bar dataKey="percentage" radius={[0, 4, 4, 0]}>
+          <Bar dataKey="percentage" radius={[0, 4, 4, 0]} name="Harcama">
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.percentage >= 100 ? '#ef4444' : entry.percentage >= 80 ? '#f59e0b' : '#10b981'} />
             ))}

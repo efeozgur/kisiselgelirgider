@@ -12,7 +12,7 @@ import {
   Reports,
   Settings
 } from './pages';
-import { initDatabase, seedDemoData } from './database/db';
+import { initDatabase } from './database/db';
 import { useEffect, useState } from 'react';
 
 function AppContent() {
@@ -23,9 +23,7 @@ function AppContent() {
     console.log('Initializing database...');
     initDatabase()
       .then(() => {
-        console.log('Database initialized, seeding demo data...');
-        seedDemoData();
-        console.log('Demo data seeded, setting ready...');
+        console.log('Database initialized, setting ready...');
         setDbReady(true);
       })
       .catch((err) => {
