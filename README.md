@@ -39,7 +39,7 @@ Modern ve şık bir kişisel finans yönetim uygulaması. Gelir ve giderlerinizi
 
 1. **Projeyi klonlayin:**
 ```bash
-git clone https://github.com/KULLANICI_ADIN/kisiselgelirgider.git
+git clone https://github.com/efeozgur/kisiselgelirgider.git
 cd kisiselgelirgider
 ```
 
